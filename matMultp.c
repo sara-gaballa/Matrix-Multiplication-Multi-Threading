@@ -123,7 +123,7 @@ void *ThreadPerElement(void *args){//calculating the matrix multiplication threa
     fclose(fp);
     return NULL;
 }
-void freeAllocation(){
+void freeAllocation(){//function frees the memory allocated for the input matrices.
     for (int i = 0; i < A.row; i++) {
         free(A.arr[i]);
     }
@@ -136,43 +136,43 @@ void freeAllocation(){
 int main(int argc, char *argv[]) {
 
     ReadInput(argv);//reading the input from the terminal
-    pthread_t ByMatrix;
+    pthread_t ByMatrix;//A thread for the matrix
     gettimeofday(&start, NULL); //start checking time
-    pthread_create(&ByMatrix, NULL, ThreadPerMatrix, NULL);
-    pthread_join(ByMatrix, NULL);
+    pthread_create(&ByMatrix, NULL, ThreadPerMatrix, NULL);//creation of the thread
+    pthread_join(ByMatrix, NULL);//waiting for the thread to end
     gettimeofday(&stop, NULL); //end checking time
-    printf("Number of threads: %d\n", 1);
+    printf("Number of threads for the first method: %d\n", 1);//printing number of threads taken by the first method
     printf("Seconds taken from the ByMatrix method %lu\n", stop.tv_sec - start.tv_sec);
-    printf("Microseconds taken for the ByMatrix: %lu\n\n", stop.tv_usec - start.tv_usec);
+    printf("Microseconds taken for the ByMatrix: %lu\n\n", stop.tv_usec - start.tv_usec);//time taken to compute the thread
 
-    pthread_t ByRow[A.row];
+    pthread_t ByRow[A.row];//creating array of threads for the second method
     gettimeofday(&start, NULL); //start checking time
     for (int i = 0; i < A.row ; ++i) {
-        pthread_create(&ByRow[i], NULL, ThreadPerRow, &i);
-        pthread_join(ByRow[i], NULL);
+        pthread_create(&ByRow[i], NULL, ThreadPerRow, &i);//creation of the thread
+        pthread_join(ByRow[i], NULL);//waiting for the thread to end
     }
     gettimeofday(&stop, NULL); //end checking time
-    printf("Number of threads: %d\n", A.row);
+    printf("Number of threads for the second method: %d\n", A.row);//printing number of threads taken by the second method
     printf("Seconds taken from the ByRow method %lu\n", stop.tv_sec - start.tv_sec);
-    printf("Microseconds taken for the ByRow method: %lu\n\n", stop.tv_usec - start.tv_usec);
+    printf("Microseconds taken for the ByRow method: %lu\n\n", stop.tv_usec - start.tv_usec);//time taken to compute all the threads
 
-    pthread_t ByElement[A.row * B.col];
-    struct Arguments args;
+    pthread_t ByElement[A.row * B.col];//Array of threads for the third method
+    struct Arguments args;//struct of argument to be sent to the thread function
     gettimeofday(&start, NULL); //start checking time
     for (int i = 0; i < A.row ; ++i) {
         for (int j = 0; j < B.col; ++j) {
             args.row = i;
             args.col = j;
-            pthread_create(&ByElement[i], NULL, ThreadPerElement, &args);
-            pthread_join(ByRow[i], NULL);
+            pthread_create(&ByElement[i], NULL, ThreadPerElement, &args);//creation of the thread
+            pthread_join(ByRow[i], NULL);//waiting for the thread to end
         }
     }
     gettimeofday(&stop, NULL); //end checking time
-    printf("Number of threads: %d\n", A.row * B.col);
+    printf("Number of threads for the third method: %d\n", A.row * B.col);//printing number of threads taken by the third method
     printf("Seconds taken from the ByElement method %lu\n", stop.tv_sec - start.tv_sec);
-    printf("Microseconds taken for the ByElement method: %lu\n\n", stop.tv_usec - start.tv_usec);
+    printf("Microseconds taken for the ByElement method: %lu\n\n", stop.tv_usec - start.tv_usec);//time taken to compute all the threads
 
     freeAllocation();
-    
+
     return 0;
 }
