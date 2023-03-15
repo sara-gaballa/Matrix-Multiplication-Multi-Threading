@@ -42,7 +42,6 @@ struct Array parseArray(char name[]){//parsing the arrays from txt file
     }
 }
 void ReadInput(char  *input[]){//reading the input entered by the user
-    char *Parsed_Input;
     char name[1024];
     if(input[1] != NULL) {//check if the input entered is not an empty line
         char name[1024];
@@ -157,14 +156,16 @@ int main(int argc, char *argv[]) {
     printf("Microseconds taken for the ByRow method: %lu\n\n", stop.tv_usec - start.tv_usec);//time taken to compute all the threads
 
     pthread_t ByElement[A.row * B.col];//Array of threads for the third method
-    struct Arguments args;//struct of argument to be sent to the thread function
+    //struct Arguments args;//struct of argument to be sent to the thread function
     gettimeofday(&start, NULL); //start checking time
     for (int i = 0; i < A.row ; ++i) {
         for (int j = 0; j < B.col; ++j) {
-            args.row = i;
-            args.col = j;
-            pthread_create(&ByElement[i], NULL, ThreadPerElement, &args);//creation of the thread
+            struct Arguments *args = (struct Arguments *)malloc(sizeof(struct Arguments));//allocating the memory for the struct
+            args->row = i;
+            args->col = j;
+            pthread_create(&ByElement[i], NULL, ThreadPerElement, (void *)args);//creation of the thread
             pthread_join(ByRow[i], NULL);//waiting for the thread to end
+            free(args);//freeing the memory
         }
     }
     gettimeofday(&stop, NULL); //end checking time
