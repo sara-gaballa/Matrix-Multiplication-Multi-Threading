@@ -5,67 +5,61 @@
 #include <sys/time.h>
 FILE *fp;//public pointer to the files
 struct timeval stop, start;//struct for saving time
-struct Array{
+struct Array{//global struct for saving arrays data
     int **arr;
     int row, col;
 };//struct for saving 2D array and number of row and columns
-struct Arguments{
+struct Arguments{//saving the arguments send to thread functions
     int row, col;
-};//saving the arguments send to thread functions
-struct Array A, B;//global assignment
+};
+struct Array A, B, C;//global assignment
 char* outputFile;//public pointer to the output file name
-struct Array parseArray(char name[]){//parsing the arrays from txt file
-    struct Array temp;//temp array to be returned from the function
-    fp = fopen(name,"r");
-    int row, col;
-    if (fp != NULL){
+void parseArray(char name[], struct Array *x) {//function to parse the input taken from files and save it in arrays
+    fp = fopen(name, "r");//reading from a file
+    if (fp != NULL) {
         char input[1024];
-        fgets(input,1024,fp);
-        sscanf(input, "row=%d col=%d", &row, &col);//extracting row and columns numbers from the file
-        int **matrix = (int **)malloc(row * sizeof(int *));//allocating memory for the 2D array A or B
-        for (int i = 0; i < row; i++) {
-            matrix[i] = (int *)malloc(col * sizeof(int));
+        fgets(input, 1024, fp);
+        sscanf(input, "row=%d col=%d", &x->row, &x->col);
+        x->arr = (int **) malloc(x->row * sizeof(int *));
+        for (int i = 0; i < x->row; i++) {
+            x->arr[i] = (int *) malloc(x->col * sizeof(int));
         }
-        for (int i = 0; i < row; i++) {
-            for (int j = 0; j < col; j++) {
-                fscanf(fp, "%d", &matrix[i][j]);
+        for (int i = 0; i < x->row; i++) {
+            for (int j = 0; j < x->col; j++) {
+                fscanf(fp, "%d", &x->arr[i][j]);//inserting input to the array
             }
         }
-        temp.arr = matrix;
-        temp.row = row;
-        temp.col = col;
         fclose(fp);
-        return temp;
-    }else{//print error if the file can not be accessed
+    } else {
         printf("Error opening the file");
         exit(1);
     }
 }
+
 void ReadInput(char  *input[]){//reading the input entered by the user
     char name[1024];
     if(input[1] != NULL) {//check if the input entered is not an empty line
         char name[1024];
         strcpy(name, input[1]);
         strcat(name, ".txt");
-        A = parseArray(name);
+        parseArray(name, &A);//parsing data to A
         strcpy(name, input[2]);
         strcat(name, ".txt");
-        B = parseArray(name);
-        outputFile = input[3];
+        parseArray(name, &B);//parsing data to B
+        if(A.col != B.row){
+            printf("Error matrices cant be multiplied");
+            exit(0);
+        }
+        outputFile = input[3];//name of the output file
     }
     else{//the default case if the user do not enter names of the files
-        A = parseArray("a.txt");
-        B = parseArray("b.txt");
+        parseArray("a.txt", &A);//parsing data to A
+        parseArray("b.txt", &B);//parsing data to B
         outputFile = "c";
     }
 }
+
 void* ThreadPerMatrix(void * arg){//calculating the matrix multiplication thread by matrix
-    char temp[1024];
-    strcpy(temp, outputFile);
-    strcat(temp,"_per_matrix.txt");//creating the output file of this method according to the public name of the output
-    fp = fopen(temp,"a");
-    fprintf(fp,"Method: A thread per matrix\n");
-    fprintf(fp,"row=%d col=%d\n", A.row, B.col);
     int mult;
     for (int i = 0; i < A.row; ++i) {//doing the multiplication operation
         for (int j = 0; j < B.col; ++j) {
@@ -73,53 +67,31 @@ void* ThreadPerMatrix(void * arg){//calculating the matrix multiplication thread
             for (int k = 0; k < A.col; ++k) {
                 mult += A.arr[i][k] * B.arr[k][j];
             }
-            fprintf(fp,"%d ",mult);//print each element in the file
+           C.arr[i][j] = mult;//saving the result in result array
         }
-        fprintf(fp,"\n");
     }
-    fclose(fp);
     return NULL;
 }
-void* ThreadPerRow(void * i){//calculating the matrix multiplication thread by row
-    int ROW = *(int*)i;//extracting the row number from the function argument
-    char temp[1024];
-    strcpy(temp, outputFile);
-    strcat(temp,"_per_row.txt");//creating the output file of this method according to the public name of the output
-    fp = fopen(temp,"a");
-    if(ROW == 0) {
-        fprintf(fp, "Method: A thread per row\n");
-        fprintf(fp,"row=%d col=%d\n", A.row, B.col);
-    }
+void* ThreadPerRow(void * arg){//calculating the matrix multiplication thread by row
+    int ROW = (int)arg;//extracting the row number from the function argument
     int mult ;
     for (int i = 0; i < B.col; ++i) {
         mult = 0;
         for (int j = 0; j < B.row; ++j) {
             mult += A.arr[ROW][j] * B.arr[j][i];
         }
-        fprintf(fp,"%d ",mult);
+        C.arr[ROW][i] = mult;//saving the result in result array
     }
-    fprintf(fp,"\n");
-    fclose(fp);
     return NULL;
 }
 void *ThreadPerElement(void *args){//calculating the matrix multiplication thread by element
     struct Arguments *arg = (struct Arguments*)args;
-    char temp[1024];
-    strcpy(temp, outputFile);
-    strcat(temp,"_per_element.txt");//creating the output file of this method according to the public name of the output
-    fp = fopen(temp,"a");
-    if(arg->row == 0 && arg->col ==0 ){
-        fprintf(fp,"Method: A thread per element\n");
-        fprintf(fp,"row=%d col=%d\n", A.row, B.col);
-    }
     int mult = 0;
     for (int i = 0; i < A.col; ++i) {
         mult += A.arr[arg->row][i] * B.arr[i][arg->col];
     }
-    fprintf(fp,"%d ",mult);
-    if(arg->col == B.col -1)
-        fprintf(fp,"\n");
-    fclose(fp);
+    C.arr[arg->row][arg->col] = mult;//saving the result in result array
+    free(arg);//freeing the allocation of the struct
     return NULL;
 }
 void freeAllocation(){//function frees the memory allocated for the input matrices.
@@ -131,15 +103,50 @@ void freeAllocation(){//function frees the memory allocated for the input matric
         free(B.arr[i]);
     }
     free(B.arr);
+    for (int i = 0; i < C.row; i++) {
+        free(C.arr[i]);
+    }
+    free(C.arr);
+}
+void writeFile(char name[],char FunctionName[]){//function to write output to file
+    fp = fopen(name,"w");
+    fprintf(fp,FunctionName);//printing function name
+    fprintf(fp,"row=%d col=%d\n", A.row, B.col);//printing rows and columns
+    for (int i = 0; i < C.row; ++i) {
+        for (int j = 0; j < C.col; ++j) {
+            fprintf(fp,"%d ",C.arr[i][j]);
+        }
+        fprintf(fp,"\n");
+    }
+    fclose(fp);
+}
+void clearRes(){//clearing the result array for the nest method
+    for (int i = 0; i < C.row; ++i) {
+        for (int j = 0; j < C.col; ++j) {
+           C.arr[i][j] = 0;
+        }
+    }
 }
 int main(int argc, char *argv[]) {
-
     ReadInput(argv);//reading the input from the terminal
+
+    C.row = A.row;
+    C.col = B.col;
+    C.arr = (int **) malloc(C.row * sizeof(int *));
+    for (int i = 0; i < C.row; i++) {//allocating memory for the result array
+        C.arr[i] = (int *) malloc(C.col * sizeof(int));
+    }
+
     pthread_t ByMatrix;//A thread for the matrix
     gettimeofday(&start, NULL); //start checking time
     pthread_create(&ByMatrix, NULL, ThreadPerMatrix, NULL);//creation of the thread
     pthread_join(ByMatrix, NULL);//waiting for the thread to end
     gettimeofday(&stop, NULL); //end checking time
+    char temp[1024];
+    strcpy(temp, outputFile);
+    strcat(temp,"_per_matrix.txt");//creating the output file of this method according to the public name of the output
+    writeFile(temp,"Method: A thread per matrix\n");
+    clearRes();//clearing the result matrix
     printf("Number of threads for the first method: %d\n", 1);//printing number of threads taken by the first method
     printf("Seconds taken from the ByMatrix method %lu\n", stop.tv_sec - start.tv_sec);
     printf("Microseconds taken for the ByMatrix: %lu\n\n", stop.tv_usec - start.tv_usec);//time taken to compute the thread
@@ -147,33 +154,44 @@ int main(int argc, char *argv[]) {
     pthread_t ByRow[A.row];//creating array of threads for the second method
     gettimeofday(&start, NULL); //start checking time
     for (int i = 0; i < A.row ; ++i) {
-        pthread_create(&ByRow[i], NULL, ThreadPerRow, &i);//creation of the thread
+        pthread_create(&ByRow[i], NULL, ThreadPerRow, (void*)i);//creation of the thread
+    }
+
+    for (int i = 0; i < A.row ; ++i) {
         pthread_join(ByRow[i], NULL);//waiting for the thread to end
     }
     gettimeofday(&stop, NULL); //end checking time
+    strcpy(temp, outputFile);
+    strcat(temp,"_per_row.txt");//creating the output file of this method according to the public name of the output
+    writeFile(temp,"Method: A thread per row\n");
+    clearRes();//clearing the result matrix
     printf("Number of threads for the second method: %d\n", A.row);//printing number of threads taken by the second method
     printf("Seconds taken from the ByRow method %lu\n", stop.tv_sec - start.tv_sec);
     printf("Microseconds taken for the ByRow method: %lu\n\n", stop.tv_usec - start.tv_usec);//time taken to compute all the threads
 
-    pthread_t ByElement[A.row * B.col];//Array of threads for the third method
-    //struct Arguments args;//struct of argument to be sent to the thread function
     gettimeofday(&start, NULL); //start checking time
+    pthread_t ByElement[A.row ][B.col];//2D Array of threads for the third method
     for (int i = 0; i < A.row ; ++i) {
         for (int j = 0; j < B.col; ++j) {
-            struct Arguments *args = (struct Arguments *)malloc(sizeof(struct Arguments));//allocating the memory for the struct
+            struct Arguments *args = malloc(sizeof(struct Arguments));
             args->row = i;
             args->col = j;
-            pthread_create(&ByElement[i], NULL, ThreadPerElement, (void *)args);//creation of the thread
-            pthread_join(ByRow[i], NULL);//waiting for the thread to end
-            free(args);//freeing the memory
+            pthread_create(&ByElement[i][j], NULL, ThreadPerElement, (void *)args);//creation of the thread
+        }
+    }
+    for(int i = 0; i < A.row; i++) {// Wait for all threads to complete
+        for(int j = 0; j < B.col; j++) {
+            pthread_join(ByElement[i][j], NULL);//waiting for the thread to end
         }
     }
     gettimeofday(&stop, NULL); //end checking time
+    strcpy(temp, outputFile);
+    strcat(temp,"_per_element.txt");//creating the output file of this method according to the public name of the output
+    writeFile(temp,"Method: A thread per element\n");
     printf("Number of threads for the third method: %d\n", A.row * B.col);//printing number of threads taken by the third method
     printf("Seconds taken from the ByElement method %lu\n", stop.tv_sec - start.tv_sec);
     printf("Microseconds taken for the ByElement method: %lu\n\n", stop.tv_usec - start.tv_usec);//time taken to compute all the threads
 
-    freeAllocation();
-
+    freeAllocation();//freeing the allocation of the arrays 
     return 0;
 }
