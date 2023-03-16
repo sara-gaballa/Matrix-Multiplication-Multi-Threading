@@ -35,7 +35,6 @@ void parseArray(char name[], struct Array *x) {//function to parse the input tak
         exit(1);
     }
 }
-
 void ReadInput(char  *input[]){//reading the input entered by the user
     char name[1024];
     if(input[1] != NULL) {//check if the input entered is not an empty line
@@ -58,7 +57,6 @@ void ReadInput(char  *input[]){//reading the input entered by the user
         outputFile = "c";
     }
 }
-
 void* ThreadPerMatrix(void * arg){//calculating the matrix multiplication thread by matrix
     int mult;
     for (int i = 0; i < A.row; ++i) {//doing the multiplication operation
@@ -127,6 +125,7 @@ void clearRes(){//clearing the result array for the nest method
         }
     }
 }
+
 int main(int argc, char *argv[]) {
     ReadInput(argv);//reading the input from the terminal
 
@@ -137,8 +136,8 @@ int main(int argc, char *argv[]) {
         C.arr[i] = (int *) malloc(C.col * sizeof(int));
     }
 
-    pthread_t ByMatrix;//A thread for the matrix
     gettimeofday(&start, NULL); //start checking time
+    pthread_t ByMatrix;//A thread for the matrix
     pthread_create(&ByMatrix, NULL, ThreadPerMatrix, NULL);//creation of the thread
     pthread_join(ByMatrix, NULL);//waiting for the thread to end
     gettimeofday(&stop, NULL); //end checking time
@@ -151,8 +150,8 @@ int main(int argc, char *argv[]) {
     printf("Seconds taken from the ByMatrix method %lu\n", stop.tv_sec - start.tv_sec);
     printf("Microseconds taken for the ByMatrix: %lu\n\n", stop.tv_usec - start.tv_usec);//time taken to compute the thread
 
-    pthread_t ByRow[A.row];//creating array of threads for the second method
     gettimeofday(&start, NULL); //start checking time
+    pthread_t ByRow[A.row];//creating array of threads for the second method
     for (int i = 0; i < A.row ; ++i) {
         pthread_create(&ByRow[i], NULL, ThreadPerRow, (void*)i);//creation of the thread
     }
@@ -192,6 +191,6 @@ int main(int argc, char *argv[]) {
     printf("Seconds taken from the ByElement method %lu\n", stop.tv_sec - start.tv_sec);
     printf("Microseconds taken for the ByElement method: %lu\n\n", stop.tv_usec - start.tv_usec);//time taken to compute all the threads
 
-    freeAllocation();//freeing the allocation of the arrays 
+    freeAllocation();//freeing the allocation of the arrays
     return 0;
 }
